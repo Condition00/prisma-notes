@@ -23,3 +23,8 @@ app.use((err, req, res, next) => {
 
 // Export the app for testing
 module.exports = app;
+
+// Test route
+app.get('/test', (req, res) => {
+    res.json({ message: 'This is a test route' });
+});
