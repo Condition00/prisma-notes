@@ -20,3 +20,11 @@ app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).send('Something broke!');
 });
+
+// Export the app for testing
+module.exports = app;
+
+// Test route
+app.get('/test', (req, res) => {
+    res.json({ message: 'This is a test route' });
+});
