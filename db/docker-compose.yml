@@ -14,13 +14,17 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  adminer:
-    image: adminer
+  pgadmin:
+    image: dpage/pgadmin4
     restart: always
-    container_name: dev-adminer
+    container_name: dev-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "8080:8080"
+      - "5050:80"  # pgAdmin runs on port 80 internally
+    depends_on:
+      - db
 
 volumes:
   pgdata:
-
