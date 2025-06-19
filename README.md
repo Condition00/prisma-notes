@@ -1,4 +1,4 @@
-# Prisma with PostgreSQL 
+# Prisma with PostgreSQL
 
 This repository contains my learning journey with Prisma ORM and PostgreSQL. Below are detailed notes about Prisma concepts, database modeling, and code examples.
 
@@ -344,3 +344,270 @@ This implementation showcases a different approach to modeling relations in Pris
 ---
 
 This README documents my learning process with Prisma and PostgreSQL. It will be updated as I learn more concepts and implement new features.
+
+## Advanced Prisma Query Operations
+
+### Where Filtering with Relationships
+
+Prisma allows complex filtering across relationships, enabling powerful queries that span multiple tables:
+
+```typescript
+// Find all users who have written posts with a rating higher than 4
+const usersWithHighRatedPosts = await prisma.user.findMany({
+  where: {
+    writtenPost: {
+      some: {
+        rating: { gt: 4 }
+      }
+    }
+  }
+});
+
+// Find users who have no preferences set
+const usersWithoutPreferences = await prisma.user.findMany({
+  where: {
+    userPreference: null
+  }
+});
+
+// Find users who have favorited posts in a specific category
+const usersFavoritingTech = await prisma.user.findMany({
+  where: {
+    favouritePost: {
+      some: {
+        categories: {
+          some: {
+            name: "Technology"
+          }
+        }
+      }
+    }
+  }
+});
+```
+
+### Complex Filtering Operators
+
+Prisma supports a variety of filtering operators:
+
+```typescript
+// Equality
+where: { age: 30 }
+
+// Greater than/less than
+where: { age: { gt: 18, lt: 65 } }
+
+// Text operations
+where: {
+  name: { contains: "John" },
+  email: { startsWith: "meow" },
+  role: { not: "ADMIN" }
+}
+
+// Logical operators
+where: {
+  OR: [
+    { age: { lt: 18 } },
+    { age: { gt: 65 } }
+  ],
+  AND: [
+    { email: { endsWith: "@gmail.com" } },
+    { name: { not: "Admin" } }
+  ]
+}
+
+// List operations
+where: {
+  age: { in: [18, 21, 25] }
+}
+```
+
+### Client Update Operations
+
+Prisma provides multiple ways to update records:
+
+#### Basic Updates
+
+```typescript
+// Update a single record
+const updatedUser = await prisma.user.update({
+  where: { id: "user-id" },
+  data: { name: "Updated Name" }
+});
+
+// Update multiple records
+const updatedUsers = await prisma.user.updateMany({
+  where: { age: { lt: 18 } },
+  data: { role: "USER" }
+});
+```
+
+#### Increment/Decrement
+
+```typescript
+// Increment a user's age by 1
+const olderUser = await prisma.user.update({
+  where: { id: "user-id" },
+  data: { age: { increment: 1 } }
+});
+
+// Decrement a post's rating
+const lowerRatedPost = await prisma.post.update({
+  where: { id: "post-id" },
+  data: { rating: { decrement: 0.5 } }
+});
+```
+
+#### Updating Relations
+
+```typescript
+// Add a post to a user's favorites
+const userWithNewFavorite = await prisma.user.update({
+  where: { id: "user-id" },
+  data: {
+    favouritePost: {
+      connect: { id: "post-id" }
+    }
+  }
+});
+
+// Remove a post from favorites
+const userWithoutFavorite = await prisma.user.update({
+  where: { id: "user-id" },
+  data: {
+    favouritePost: {
+      disconnect: { id: "post-id" }
+    }
+  }
+});
+
+// Replace all favorites with a new set
+const userWithNewFavorites = await prisma.user.update({
+  where: { id: "user-id" },
+  data: {
+    favouritePost: {
+      set: [{ id: "post-1" }, { id: "post-2" }]
+    }
+  }
+});
+```
+
+### Connect Existing Records
+
+When creating or updating records, you can connect to existing records rather than creating new ones:
+
+```typescript
+// Create a user and connect to an existing preference
+const userWithExistingPreference = await prisma.user.create({
+  data: {
+    name: "Jane Doe",
+    email: "jane@example.com",
+    age: 28,
+    userPreference: {
+      connect: { id: "existing-preference-id" }
+    }
+  }
+});
+
+// Add an existing category to a post
+const postWithCategory = await prisma.post.update({
+  where: { id: "post-id" },
+  data: {
+    categories: {
+      connect: { id: "category-id" }
+    }
+  }
+});
+
+// Connect or create (use existing if found, create if not)
+const postWithTechCategory = await prisma.post.update({
+  where: { id: "post-id" },
+  data: {
+    categories: {
+      connectOrCreate: {
+        where: { name: "Technology" },
+        create: { name: "Technology" }
+      }
+    }
+  }
+});
+```
+
+### Client Delete Operations
+
+Prisma provides several ways to delete records:
+
+```typescript
+// Delete a single record by ID or unique field
+const deletedUser = await prisma.user.delete({
+  where: { id: "user-id" }
+});
+
+// Delete multiple records matching criteria
+const deletionResult = await prisma.user.deleteMany({
+  where: {
+    email: { endsWith: "@old-domain.com" },
+    lastLogin: { lt: new Date('2023-01-01') }
+  }
+});
+
+// Cascading deletes
+// (requires onDelete: Cascade in the schema)
+// Example schema:
+// posts Post[] @relation("writtenPosts", onDelete: Cascade)
+//
+// Then, when you delete a user:
+const userAndPostsDeleted = await prisma.user.delete({
+  where: { id: "user-id" }
+  // This will also delete all the user's posts if relation is set to cascade
+});
+```
+
+### Handling Database Cleanup and Constraints
+
+As seen in the script.ts file, when dealing with related tables, deletion order matters:
+
+```typescript
+// Clean up tables in the correct order to avoid constraint violations
+await prisma.user.deleteMany();
+await prisma.userPreference.deleteMany();
+```
+
+This is important because:
+
+1. Foreign key constraints prevent deleting records that are referenced by other tables
+2. The order of deletion operations should generally be from "child" to "parent" records
+3. Alternatively, you can use cascading deletes in your schema design
+
+## Pagination and Sorting
+
+Prisma provides built-in support for pagination and sorting:
+
+```typescript
+// Basic pagination with take and skip
+const page2Users = await prisma.user.findMany({
+  take: 10,   // Limit to 10 records
+  skip: 10,   // Skip the first 10 records (page 1)
+  orderBy: {  // Sort by name ascending
+    name: 'asc'
+  }
+});
+
+// Multiple sort criteria
+const sortedPosts = await prisma.post.findMany({
+  orderBy: [
+    { createdAt: 'desc' },  // Primary sort: newest first
+    { rating: 'desc' }      // Secondary sort: highest rated first
+  ]
+});
+
+// Cursor-based pagination (more efficient for large datasets)
+const nextPageUsers = await prisma.user.findMany({
+  take: 10,
+  skip: 1,  // Skip the cursor
+  cursor: { id: "last-id-from-previous-page" },
+  orderBy: { id: 'asc' }
+});
+```
+
+These advanced operations demonstrate Prisma's power and flexibility for working with relational data.
