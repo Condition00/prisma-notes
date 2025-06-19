@@ -1,4 +1,4 @@
-# Prisma with PostgreSQL Learning Project
+# Prisma with PostgreSQL 
 
 This repository contains my learning journey with Prisma ORM and PostgreSQL. Below are detailed notes about Prisma concepts, database modeling, and code examples.
 
