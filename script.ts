@@ -8,14 +8,14 @@ async function main() {
             name: "John Doe",
             email: "john@gmail.com",
             age: 30,
-            UserPreferences: {
+            userPreference: {
                 create: {
                     emailNotifications: true,
                 },
             },
         },
         include: {
-            UserPreferences: true,
+            userPreference: true,
         },
     });
 

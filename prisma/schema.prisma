@@ -15,32 +15,33 @@ datasource db {
 }
 
 model User {
-    id              String            @id @default(uuid())
-    age             Int
-    name            String
-    email           String            @unique
+    id               String          @id @default(uuid())
+    age              Int
+    name             String
+    email            String          @unique
     //isAdmin         Boolean
-    role            Role              @default(USER)
-    writtenPost     Post[]            @relation("writtenPosts")
+    role             Role            @default(USER)
+    writtenPost      Post[]          @relation("writtenPosts")
     // ambiguous relation so extra relation field is needed
-    favouritePost   Post[]            @relation("favouritedPosts")
-    UserPreferences UserPreferences[]
+    favouritePost    Post[]          @relation("favouritedPosts")
+    // UserPreferences UserPreferences[]
+    userPreference   UserPreference? @relation(fields: [userPreferenceId], references: [id])
+    userPreferenceId String?         @unique
 
     @@unique([age, name]) // both need to be unique together
     @@index([email]) // index on email field for faster lookups
 }
 
-model UserPreferences {
+model UserPreference {
     id                 String  @id @default(uuid())
-    userId             String  @unique
+    //userId             String  @unique
     emailNotifications Boolean
-    user               User    @relation(fields: [userId], references: [id])
+    //user               User    @relation(fields: [userId], references: [id])
+    User               User?
 }
 
 // we are referencing the User model in the UserPreferences model so when we try deleting a user,
 // Prisma will throw an error if there are any UserPreferences associated with that user.
-
-
 
 //field modifier and attribute are optional after name and type
 // you can add them to modify the field or add attributes like @unique, @default,

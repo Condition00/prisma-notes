@@ -258,6 +258,89 @@ const result = await prisma.$queryRaw`SELECT * FROM "User" WHERE age > ${18}`;
    });
    ```
 
+## Recent Changes: User-UserPreference Relationship
+
+### What Changed
+
+I recently modified the relationship between the User and UserPreference models:
+
+1. **Renamed the Model**:
+   - Changed from `UserPreferences` (plural) to `UserPreference` (singular)
+
+2. **Reversed the Relation Direction**:
+   - Before: User had a one-to-many relationship with UserPreferences
+   - After: User has a one-to-one relationship with UserPreference through a foreign key in the User model
+
+3. **Updated Schema Structure**:
+
+```prisma
+model User {
+    id               String          @id @default(uuid())
+    // ...other fields...
+    userPreference   UserPreference? @relation(fields: [userPreferenceId], references: [id])
+    userPreferenceId String?         @unique
+}
+
+model UserPreference {
+    id                 String  @id @default(uuid())
+    emailNotifications Boolean
+    User               User?   // Back-reference to User
+}
+```
+
+4. **Updated Code Usage**:
+
+```typescript
+// Create a user with preferences (new approach)
+const user = await prisma.user.create({
+    data: {
+        name: "John Doe",
+        email: "john@gmail.com",
+        age: 30,
+        userPreference: {
+            create: {
+                emailNotifications: true,
+            },
+        },
+    },
+    include: {
+        userPreference: true,
+    },
+});
+```
+
+### Why I Made These Changes
+
+1. **Resolving Deletion Constraints**:
+   - With the previous design, Prisma would throw an error when trying to delete a user with associated preferences
+   - The original schema comment noted: "We are referencing the User model in the UserPreferences model so when we try deleting a user, Prisma will throw an error if there are any UserPreferences associated with that user"
+   - The new structure addresses this issue by changing the relation direction
+
+2. **More Explicit Relationship**:
+   - The new structure better expresses the true one-to-one nature of the relationship
+   - A user can have at most one preference record, and a preference record belongs to at most one user
+
+3. **Flexibility**:
+   - The relationship is now optional on both sides
+   - This allows preferences to exist independently of users if needed
+
+4. **Learning Different Relation Patterns**:
+   - This demonstrates an alternative way to model one-to-one relationships in Prisma
+   - The foreign key is now in the "parent" entity (User) rather than the "child" entity
+
+5. **Cleaner Data Structure**:
+   - The singular name better represents the cardinality of the relationship
+   - The optional relationship on both sides allows for more flexible creation and deletion patterns
+
+### Technical Implementation Details
+
+- The `@unique` constraint on `userPreferenceId` ensures the one-to-one relationship
+- The optional `?` marker means the relationship isn't required on either side
+- The `User` field in the `UserPreference` model is a back-reference that Prisma uses to navigate the relationship in both directions
+- This approach allows for querying in either direction: from User to UserPreference or vice versa
+
+This implementation showcases a different approach to modeling relations in Prisma and provides flexibility in how data is created and accessed.
+
 ---
 
 This README documents my learning process with Prisma and PostgreSQL. It will be updated as I learn more concepts and implement new features.
