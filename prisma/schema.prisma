@@ -15,7 +15,79 @@ datasource db {
 }
 
 model User {
-    id   Int    @id @default(autoincrement())
-    name String
+    id              String            @id @default(uuid())
+    age             Int
+    name            String
+    email           String            @unique
+    //isAdmin         Boolean
+    role            Role              @default(USER)
+    writtenPost     Post[]            @relation("writtenPosts")
+    // ambiguous relation so extra relation field is needed
+    favouritePost   Post[]            @relation("favouritedPosts")
+    UserPreferences UserPreferences[]
+
+    @@unique([age, name]) // both need to be unique together
+    @@index([email]) // index on email field for faster lookups
 }
 
+model UserPreferences {
+    id                 String  @id @default(uuid())
+    userId             String  @unique
+    emailNotifications Boolean
+    user               User    @relation(fields: [userId], references: [id])
+}
+
+// we are referencing the User model in the UserPreferences model so when we try deleting a user,
+// Prisma will throw an error if there are any UserPreferences associated with that user.
+
+
+
+//field modifier and attribute are optional after name and type
+// you can add them to modify the field or add attributes like @unique, @default,
+// @relation, etc.
+
+// models represent the different tables in your database
+
+model Post {
+    id             String     @id @default(uuid())
+    title          String
+    rating         Float
+    createdAt      DateTime   @default(now())
+    updatedAt      DateTime   @updatedAt
+    author         User       @relation("writtenPosts", fields: [authorId], references: [id])
+    authorId       String
+    favouritedBy   User?      @relation("favouritedPosts", fields: [favouritedById], references: [id])
+    favouritedById String?
+    categories     Category[]
+
+    //@@id([title, authorId]) // composite primary key on title and authorId
+}
+
+// each user can have many posts, but each post belongs to one user
+// this is a one to many relation, where User is the "one" side and Post is the "many" side.
+// Prisma uses the @relation directive to define relations between models.
+
+//one to many relation => use @relation directive with a foreign key
+// many to many relation => use @relation directive with a join table
+// one to one relation => use @relation directive
+
+//autoincrement to uuid // use @default(autoincrement()) for integer primary keys
+// use @default(uuid()) for uuid primary keys
+// use @default(cuid()) for cuid primary keys
+// use @default(dbgenerated("gen_random_uuid()")) for PostgreSQL UUIDs
+// use @default(dbgenerated("nextval('my_sequence')")) for PostgreSQL autoincrement
+// use @default(now()) for timestamps
+
+model Category {
+    id    String @id @default(uuid())
+    name  String @unique
+    posts Post[]
+}
+
+// field level attributes => @unique, @default, @relation, @updatedAt, @map, @db, etc.
+// block level attributes => @@index, @@unique, @@map, @@db, etc.
+
+enum Role {
+    USER
+    ADMIN
+}

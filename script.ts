@@ -2,8 +2,24 @@ import { PrismaClient } from "./generated/prisma";
 const prisma = new PrismaClient();
 
 async function main() {
-    const user = await prisma.user.create({data: {name: "meow"}})
-    console.log(user);
+    await prisma.user.deleteMany({});
+    const user  = await prisma.user.create({
+        data: {
+            name: "John Doe",
+            email: "john@gmail.com",
+            age: 30,
+            UserPreferences: {
+                create: {
+                    emailNotifications: true,
+                },
+            },
+        },
+        include: {
+            UserPreferences: true,
+        },
+    });
+
+    console.log("User created:", user);
 }
 
 main()
@@ -15,4 +31,4 @@ main()
   });
 
 
-  //14:40            
+  //14:40
